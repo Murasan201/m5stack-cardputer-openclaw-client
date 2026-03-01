@@ -20,7 +20,28 @@
 - `display_manager.cpp` で未定義だった `TFT_LIME` を `TFT_GREEN` に変更してコンパイル。ビルドは成功して `firmware.bin` を生成（RAM 14.5%、Flash 30.1% 使用）。
 - PlatformIO ビルドと Python テストの両方が通ったことを Slack に報告。
 
-### 5. 次のステップ
-- `software/cardputer-client/src/config.h` に Wi-Fi 要件・OpenClaw URL・認証トークンを反映してから、PlatformIO による `pio run --target upload --environment m5stack-cardputer` で Cardputer に書き込む。
-- 実機では A ボタンで対話モード開始、B で候補/確定/A+B で削除、C で送信し、LCD に OpenClaw の応答が表示されるかを確認。
+### 5. 実機への書き込み
+- PlatformIO (.venv) を再構築し、`pio run` でビルド成功。
+- `pio run --target upload --upload-port /dev/ttyACM1` で Cardputer (ESP32-S3 rev v0.2, MAC: xx:xx:xx:xx:xx:xx) への書き込みに成功。
+
+### 6. 日本語表示の文字化け修正
+- デフォルトフォント（ASCII のみ）では日本語が文字化けしていた。
+- `M5.Lcd.setFont(&fonts::efontJA_12)` に変更し、M5GFX 内蔵の日本語フォントを使用。
+- LCD 座標もフォントサイズに合わせて再調整。Flash 使用量 30.1% → 39.3%（フォントデータ分）。
+
+### 7. GitHub リポジトリ作成
+- リポジトリ: `Murasan201/m5stack-cardputer-openclaw-client`
+- Initial commit + ツールチェーン仕様書 (`docs/toolchain-spec.md`) をプッシュ。
+- README.md を英語に全面書き換え。
+
+### 8. OpenClaw 接続設定
+- OpenClaw gateway は `127.0.0.1:18789`（loopback）のため、Cardputer から直接接続不可。
+- nginx リバースプロキシを導入（ポート 18800、LAN `192.168.11.0/24` のみ許可）。
+- `config.h` に Wi-Fi SSID/PW、OpenClaw プロキシ URL、Bearer トークンを設定。
+- `config.h` は `.gitignore` に追加し、`config.h.example` をテンプレートとして提供。
+- ビルド＋書き込み成功。実機で OpenClaw との通信が可能な状態。
+
+### 9. 次のステップ
+- 実機で A ボタン → 日本語入力 → C で送信し、OpenClaw 応答が LCD に表示されるか確認。
 - 必要に応じて JSON/HTTP 応答処理や IME 候補の拡張、バグ修正を加えていく。
+- 物理キーボード（56 キー）を活用した直接入力モードの検討。

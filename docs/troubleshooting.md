@@ -62,8 +62,8 @@
 - **想定原因**: Buffer クリア処理が足りない、TFT のバックグラウンド色とテキスト色が被る、またはフォントに含まれない文字を表示しようとしている。
 - **対応策**:
   1. `DisplayManager::showPromptMode` では画面全体を `TFT_NAVY` で塗りつぶした後に描画しているので、末尾が残る場合は `clearRegion` を呼ぶ。
-  2. 表示化けが出る文字（記号や絵文字）を避けるか、FreeFont を追加して `M5.Lcd.setFreeFont` で汎用フォントを使う。
-  3. 文字列が 320px を超える場合は `printWrapped` で折り返し済みだが、必要ならスクロール機能を追加する。`
+  2. **日本語文字化けの解決済み事例**: デフォルトフォント（ASCII のみ）では日本語が化ける。`M5.Lcd.setFont(&fonts::efontJA_12)` で M5GFX 内蔵の日本語フォント（efont）を使用すること。利用可能なサイズ: `efontJA_10`, `efontJA_12`, `efontJA_14`, `efontJA_16`, `efontJA_24`。
+  3. 文字列が 320px を超える場合は `printWrapped` で折り返し済みだが、必要ならスクロール機能を追加する。
 
 ### 2.5 ボタン入力の意図せぬ解釈 / 倍角キー
 - **症状**: `B` ボタンでの候補確定なのに `A` ボタンと同時押し判定でバックスペースになってしまう、または `C` で送信したつもりが押されていない。
@@ -73,16 +73,27 @@
   2. `M5.BtnA.isPressed()` 併用で同時押し判定を行っているので、必要に応じて直前状態 (`lastState`) を保存し、Debounce 期間を長めに取る。
   3. 会話中に予期せぬ入力が起きた場合は `promptInput.clear()` で素早くリセットし、再入力を促す UI を追加する。
 
+### 2.6 OpenClaw gateway にローカルネットワークから接続できない
+- **症状**: Cardputer から `http://YOUR_RASPI_IP:18789` に接続しても応答がない。
+- **原因**: OpenClaw gateway は `bind: "loopback"` で `127.0.0.1` のみリッスンしている。
+- **対応策（採用済み）**:
+  1. nginx リバースプロキシをポート 18800 で設置し、`proxy_pass http://127.0.0.1:18789` でローカルに中継。
+  2. nginx 設定で `allow 192.168.11.0/24; deny all;` によりローカルネットワークのみ許可。
+  3. UFW で `18800/tcp` を `192.168.11.0/24` からのみ許可。
+  4. `config.h` の URL を `http://YOUR_RASPI_IP:18800/api/v1/prompt` に設定。
+- **関連ファイル**: `/etc/nginx/sites-available/openclaw-proxy`
+
 ## 3. ビルド／実行環境の状況と備考
-- **Python テスト**: `.venv` に `pytest` を入れた状態で `python -m pytest project/m5stack-cardputer-app/tests` を実行し、7 件のテストはすべてパスしている。仮想環境構築手順は `tests/README.md` に記載。
-- **PlatformIO ビルド**: 現時点（このドキュメント更新時点）では `pio` CLI がインストールされておらず、`pio run` を実行すると「command not found」エラーになる。ビルドはユーザー側で PlatformIO を導入後、以下のコマンドで行ってください。
+- **Python テスト**: `.venv` に `pytest` を入れた状態で `python -m pytest tests` を実行し、7 件のテストはすべてパスしている。仮想環境構築手順は `tests/README.md` に記載。
+- **PlatformIO ビルド**: `.venv` に PlatformIO 6.1.19 をインストール済み。ツールチェーンは SSD (`/mnt/ssd/.platformio`) に配置。
   ```bash
-  # PlatformIO をまだ入れていない場合（例）
-  python -m pip install --user platformio
-  # 既存 venv を使う場合は .venv/bin/activate
+  source .venv/bin/activate
+  export PLATFORMIO_CORE_DIR=/mnt/ssd/.platformio
+  cd software/cardputer-client
   pio run --environment m5stack-cardputer
-  pio run --environment m5stack-cardputer --target upload
+  pio run --target upload --environment m5stack-cardputer --upload-port /dev/ttyACM1
   ```
-- **ビルド実行の代替**: `pio` を利用できない環境では、ソースコードを Git などで別 PC にチェックアウトしてビルド・アップロードする。コンパイル時にエラーが出たら、該当ソース (`dialogue_manager.cpp` など) を修正し、`pio run` を再実行。
+- **認証情報**: `config.h` に Wi-Fi パスワードと OpenClaw トークンを含むため `.gitignore` で除外。`config.h.example` をテンプレートとして使用すること。
+- **詳細なツールチェーン情報**: `docs/toolchain-spec.md` を参照。
 
 以上の内容を参照しつつ、トラブルが発生した場合はこのドキュメントを更新してください。
