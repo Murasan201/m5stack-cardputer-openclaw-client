@@ -10,9 +10,9 @@
 #define WIFI_PASSWORD "your-wifi-password"
 #endif
 
-static const char OPENCLAW_PROMPT_URL[] = "http://openclaw.local/api/v1/prompt";
-static const char OPENCLAW_MODE_URL[] = "http://openclaw.local/api/v1/mode";
-static const char OPENCLAW_AUTH_TOKEN[] = ""; // e.g. "Bearer abc123" or leave empty for unauthenticated
+static const char OPENCLAW_PROMPT_URL[] = "http://YOUR_RASPI_IP:18800/api/v1/prompt";
+static const char OPENCLAW_MODE_URL[] = "http://YOUR_RASPI_IP:18800/api/v1/mode";
+static const char OPENCLAW_AUTH_TOKEN[] = ""; // e.g. "Bearer <token>"
 
 static const unsigned long WIFI_CONNECT_TIMEOUT_MS = 12000;
 static const unsigned long PROMPT_RESPONSE_TIMEOUT_MS = 12000;

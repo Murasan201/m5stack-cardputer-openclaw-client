@@ -8,6 +8,9 @@ __pycache__/
 .pio/
 .platformio/
 
+# Credentials (use config.h.example as template)
+software/cardputer-client/src/config.h
+
 # IDE
 .vscode/
 .idea/
