@@ -13,11 +13,10 @@ void DisplayManager::showIdle() {
     M5.Lcd.fillScreen(TFT_BLACK);
     M5.Lcd.setTextColor(TFT_GREEN, TFT_BLACK);
     M5.Lcd.setCursor(10, 15);
-    M5.Lcd.println("待機中 - Aキーで対話");
-    M5.Lcd.setCursor(10, 60);
+    M5.Lcd.println("OpenClaw Client");
+    M5.Lcd.setCursor(10, 45);
     M5.Lcd.setTextColor(TFT_WHITE, TFT_BLACK);
-    M5.Lcd.println("日本語入力対応");
-    M5.Lcd.println("送信: Cキー");
+    M5.Lcd.println("何かキーを押して開始");
 }
 
 void DisplayManager::showPromptMode(const String& buffer, const String& candidate) {
@@ -28,21 +27,18 @@ void DisplayManager::showPromptMode(const String& buffer, const String& candidat
 
     M5.Lcd.setTextColor(TFT_WHITE, TFT_NAVY);
     M5.Lcd.setCursor(10, 30);
-    M5.Lcd.print("候補: ");
+    M5.Lcd.print("日本語候補[Tab]: ");
     M5.Lcd.setTextColor(TFT_YELLOW, TFT_NAVY);
     M5.Lcd.println(candidate);
 
     M5.Lcd.setTextColor(TFT_WHITE, TFT_NAVY);
     M5.Lcd.setCursor(10, 55);
-    M5.Lcd.println("入力文字列:");
-    M5.Lcd.setCursor(10, 75);
-    M5.Lcd.setTextColor(TFT_GREEN, TFT_NAVY);
-    M5.Lcd.println(buffer);
+    M5.Lcd.println("> " + buffer + "_");
 
     M5.Lcd.setTextColor(TFT_WHITE, TFT_NAVY);
-    M5.Lcd.setCursor(10, 110);
-    M5.Lcd.println("Bキー:確定  Cキー:送信");
-    M5.Lcd.println("A+B同時:削除");
+    M5.Lcd.setCursor(10, 95);
+    M5.Lcd.println("キー入力/Space:候補確定");
+    M5.Lcd.println("Del:削除 Enter:送信");
 }
 
 void DisplayManager::showSending() {
@@ -83,7 +79,7 @@ void DisplayManager::showResponse(const String& response) {
     printWrapped(response);
     M5.Lcd.setCursor(10, 125);
     M5.Lcd.setTextColor(TFT_WHITE, TFT_BLACK);
-    M5.Lcd.println("Aキー:再入力");
+    M5.Lcd.println("何かキーで再入力");
 }
 
 void DisplayManager::showError(const String& message) {
@@ -95,7 +91,7 @@ void DisplayManager::showError(const String& message) {
     M5.Lcd.setCursor(10, 75);
     M5.Lcd.println(message);
     M5.Lcd.setCursor(10, 115);
-    M5.Lcd.println("Aキーで再試行");
+    M5.Lcd.println("何かキーで再試行");
 }
 
 void DisplayManager::showStatusLine(const String& text) {

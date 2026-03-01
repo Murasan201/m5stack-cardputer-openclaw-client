@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include <M5Cardputer.h>
 
 #include "display_manager.h"
 #include "network_client.h"
@@ -22,7 +23,7 @@ public:
 private:
     void enterPromptMode();
     void exitToIdle();
-    void handlePromptInput();
+    void handlePromptInput(const Keyboard_Class::KeysState& keys, char key);
     void sendActivePrompt();
 
     SessionState state = SessionState::Idle;

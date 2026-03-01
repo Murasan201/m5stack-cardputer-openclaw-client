@@ -20,6 +20,10 @@ void PromptInput::commitCandidate() {
     accumulated += kCandidates[candidateIndex];
 }
 
+void PromptInput::appendChar(char c) {
+    accumulated += c;
+}
+
 void PromptInput::backspace() {
     if (accumulated.isEmpty()) {
         return;

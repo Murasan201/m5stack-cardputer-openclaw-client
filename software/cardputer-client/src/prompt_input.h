@@ -10,6 +10,7 @@ public:
     void previousCandidate();
     void commitCandidate();
     void backspace();
+    void appendChar(char c);
     void clear();
 
     const String& buffer() const;

@@ -9,14 +9,26 @@ void DialogueManager::begin() {
 }
 
 void DialogueManager::loop() {
+    if (!M5Cardputer.Keyboard.isChange() || !M5Cardputer.Keyboard.isPressed()) {
+        return;
+    }
+
+    Keyboard_Class::KeysState keys = M5Cardputer.Keyboard.keysState();
+    char key = 0;
+    if (!keys.word.empty()) {
+        key = keys.word[0];
+    }
+
     if (state == SessionState::Idle) {
-        if (M5.BtnA.wasPressed()) {
+        // Any key starts prompt mode
+        if (key != 0 || keys.enter) {
             enterPromptMode();
         }
     } else if (state == SessionState::Prompt) {
-        handlePromptInput();
+        handlePromptInput(keys, key);
     } else if (state == SessionState::Responding || state == SessionState::Error) {
-        if (M5.BtnA.wasPressed()) {
+        // Any key returns to prompt mode
+        if (key != 0 || keys.enter) {
             enterPromptMode();
         }
     }
@@ -26,9 +38,6 @@ void DialogueManager::enterPromptMode() {
     promptInput.clear();
     state = SessionState::Prompt;
     display.showPromptMode(promptInput.buffer(), promptInput.currentCandidate());
-    if (!network.notifyModeStatus(true)) {
-        display.showStatusLine("モード通知に失敗しました");
-    }
 }
 
 void DialogueManager::sendActivePrompt() {
@@ -39,9 +48,7 @@ void DialogueManager::sendActivePrompt() {
 
     state = SessionState::Sending;
     display.showSending();
-    if (!network.notifyModeStatus(false)) {
-        display.showStatusLine("モード終了通知に失敗しました");
-    }
+
     const PromptResponse response = network.postPrompt(promptInput.buffer());
     if (!response.success) {
         state = SessionState::Error;
@@ -54,26 +61,34 @@ void DialogueManager::sendActivePrompt() {
     display.showResponse(response.text);
 }
 
-void DialogueManager::handlePromptInput() {
+void DialogueManager::handlePromptInput(const Keyboard_Class::KeysState& keys, char key) {
     bool updated = false;
 
-    if (M5.BtnA.wasPressed()) {
+    // Enter key: send prompt
+    if (keys.enter) {
+        sendActivePrompt();
+        return;
+    }
+
+    // Backspace/Delete
+    if (keys.del) {
+        promptInput.backspace();
+        updated = true;
+    }
+    // Tab: cycle candidate
+    else if (keys.tab) {
         promptInput.nextCandidate();
         updated = true;
     }
-
-    if (M5.BtnB.wasPressed()) {
-        if (M5.BtnA.isPressed()) {
-            promptInput.backspace();
-        } else {
-            promptInput.commitCandidate();
-        }
+    // Space: commit current candidate
+    else if (key == ' ') {
+        promptInput.commitCandidate();
         updated = true;
     }
-
-    if (M5.BtnC.wasPressed()) {
-        sendActivePrompt();
-        return;
+    // Printable character: type directly into buffer
+    else if (key >= '!' && key <= '~') {
+        promptInput.appendChar(key);
+        updated = true;
     }
 
     if (updated) {
