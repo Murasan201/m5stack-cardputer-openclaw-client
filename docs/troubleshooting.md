@@ -83,6 +83,29 @@
   4. 送信時・モード切替時に `flushPending()` で残った `n` を「ん」に変換。
 - **関連ファイル**: `src/prompt_input.cpp` の `tryConvertRomaji()` と `flushPending()`
 
+### 2.8 Wi-Fi 未接続のまま送信してエラー（解決済み）
+- **症状**: プロンプト入力後 Enter で送信すると「Wi-Fi が接続されていません」と表示され送信できない。
+- **原因**: `NetworkClient::begin()` での Wi-Fi 接続が失敗していたが、画面に接続状態が表示されないためユーザーが気付けなかった。
+- **対応策**:
+  1. `begin()` で `WiFi.disconnect(true)` を呼び前セッションをクリアしてから再接続。
+  2. 起動時に LCD に「Wi-Fi 接続中...」→成功時「接続成功: (IPアドレス)」/ 失敗時「接続失敗」を表示。
+  3. `ensureConnected()` の再試行間隔を 1 秒→3 秒に変更。
+
+### 2.9 OpenClaw への送信でエラー発生（未解決）
+- **症状**: Wi-Fi 接続成功後にプロンプトを送信すると「エラー発生」と表示され応答が得られない。
+- **想定原因**:
+  1. nginx プロキシ → OpenClaw gateway 間の通信失敗
+  2. OpenClaw API のエンドポイント (`/api/v1/prompt`) やペイロード形式の不一致
+  3. Bearer トークンの認証失敗（401/403）
+  4. OpenClaw gateway 自体が停止中
+  5. HTTPレスポンスのタイムアウト（`PROMPT_RESPONSE_TIMEOUT_MS` = 12秒）
+- **次回調査手順**:
+  1. Raspberry Pi から `curl` で手動 API テスト: `curl -X POST http://127.0.0.1:18789/api/v1/prompt -H "Content-Type: application/json" -H "Authorization: Bearer ..." -d '{"prompt":"test"}'`
+  2. nginx アクセスログ確認: `tail /var/log/nginx/access.log`
+  3. OpenClaw gateway のステータス確認: `systemctl status openclaw` or プロセス確認
+  4. エラー画面に HTTP ステータスコードを表示する改修を検討
+- **関連ファイル**: `src/network_client.cpp`、`/etc/nginx/sites-available/openclaw-proxy`
+
 ### 2.6 OpenClaw gateway にローカルネットワークから接続できない
 - **症状**: Cardputer から `http://YOUR_RASPI_IP:18789` に接続しても応答がない。
 - **原因**: OpenClaw gateway は `bind: "loopback"` で `127.0.0.1` のみリッスンしている。
