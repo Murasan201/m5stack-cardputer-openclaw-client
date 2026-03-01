@@ -19,26 +19,22 @@ void DisplayManager::showIdle() {
     M5.Lcd.println("何かキーを押して開始");
 }
 
-void DisplayManager::showPromptMode(const String& buffer, const String& candidate) {
+void DisplayManager::showPromptMode(const String& buffer, const String& modeIndicator) {
     M5.Lcd.fillScreen(TFT_NAVY);
     M5.Lcd.setTextColor(TFT_CYAN, TFT_NAVY);
     M5.Lcd.setCursor(10, 5);
-    M5.Lcd.println("OpenClaw 対話モード");
-
-    M5.Lcd.setTextColor(TFT_WHITE, TFT_NAVY);
-    M5.Lcd.setCursor(10, 30);
-    M5.Lcd.print("日本語候補[Tab]: ");
+    M5.Lcd.print("OpenClaw ");
     M5.Lcd.setTextColor(TFT_YELLOW, TFT_NAVY);
-    M5.Lcd.println(candidate);
+    M5.Lcd.println(modeIndicator);
 
-    M5.Lcd.setTextColor(TFT_WHITE, TFT_NAVY);
-    M5.Lcd.setCursor(10, 55);
+    M5.Lcd.setTextColor(TFT_GREEN, TFT_NAVY);
+    M5.Lcd.setCursor(10, 30);
     M5.Lcd.println("> " + buffer + "_");
 
     M5.Lcd.setTextColor(TFT_WHITE, TFT_NAVY);
     M5.Lcd.setCursor(10, 95);
-    M5.Lcd.println("キー入力/Space:候補確定");
-    M5.Lcd.println("Del:削除 Enter:送信");
+    M5.Lcd.println("Tab:あ/A切替 Enter:送信");
+    M5.Lcd.println("Del:削除");
 }
 
 void DisplayManager::showSending() {

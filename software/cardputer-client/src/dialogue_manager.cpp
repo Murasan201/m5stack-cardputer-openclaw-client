@@ -20,14 +20,12 @@ void DialogueManager::loop() {
     }
 
     if (state == SessionState::Idle) {
-        // Any key starts prompt mode
         if (key != 0 || keys.enter) {
             enterPromptMode();
         }
     } else if (state == SessionState::Prompt) {
         handlePromptInput(keys, key);
     } else if (state == SessionState::Responding || state == SessionState::Error) {
-        // Any key returns to prompt mode
         if (key != 0 || keys.enter) {
             enterPromptMode();
         }
@@ -37,7 +35,7 @@ void DialogueManager::loop() {
 void DialogueManager::enterPromptMode() {
     promptInput.clear();
     state = SessionState::Prompt;
-    display.showPromptMode(promptInput.buffer(), promptInput.currentCandidate());
+    updatePromptDisplay();
 }
 
 void DialogueManager::sendActivePrompt() {
@@ -61,37 +59,38 @@ void DialogueManager::sendActivePrompt() {
     display.showResponse(response.text);
 }
 
-void DialogueManager::handlePromptInput(const Keyboard_Class::KeysState& keys, char key) {
-    bool updated = false;
+void DialogueManager::updatePromptDisplay() {
+    String displayBuf = promptInput.buffer() + promptInput.romajiPending();
+    String modeStr = promptInput.isJapaneseMode() ? "[あ]" : "[A]";
+    display.showPromptMode(displayBuf, modeStr);
+}
 
-    // Enter key: send prompt
+void DialogueManager::handlePromptInput(const Keyboard_Class::KeysState& keys, char key) {
+    // Enter: send prompt
     if (keys.enter) {
         sendActivePrompt();
         return;
     }
+
+    bool updated = false;
 
     // Backspace/Delete
     if (keys.del) {
         promptInput.backspace();
         updated = true;
     }
-    // Tab: cycle candidate
+    // Tab: toggle Japanese/ASCII mode
     else if (keys.tab) {
-        promptInput.nextCandidate();
+        promptInput.toggleMode();
         updated = true;
     }
-    // Space: commit current candidate
-    else if (key == ' ') {
-        promptInput.commitCandidate();
-        updated = true;
-    }
-    // Printable character: type directly into buffer
-    else if (key >= '!' && key <= '~') {
-        promptInput.appendChar(key);
+    // Printable character
+    else if (key >= ' ' && key <= '~') {
+        promptInput.inputChar(key);
         updated = true;
     }
 
     if (updated) {
-        display.showPromptMode(promptInput.buffer(), promptInput.currentCandidate());
+        updatePromptDisplay();
     }
 }

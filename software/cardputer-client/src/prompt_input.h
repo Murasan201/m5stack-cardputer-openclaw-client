@@ -6,21 +6,29 @@ class PromptInput {
 public:
     PromptInput();
 
-    void nextCandidate();
-    void previousCandidate();
-    void commitCandidate();
+    // Add a romaji character; auto-converts to hiragana when a valid sequence is found
+    void inputChar(char c);
     void backspace();
-    void appendChar(char c);
     void clear();
+    // Toggle between romaji and direct (ASCII) input mode
+    void toggleMode();
 
     const String& buffer() const;
-    String currentCandidate() const;
+    const String& romajiPending() const;
+    bool isJapaneseMode() const;
     bool hasContent() const;
 
 private:
-    static const char* const kCandidates[];
-    static constexpr size_t kCandidateCount = 18;
+    void tryConvertRomaji();
 
-    size_t candidateIndex;
-    String accumulated;
+    String accumulated;  // confirmed text (hiragana + ASCII)
+    String romaji;       // pending romaji input
+    bool japaneseMode;
+
+    struct RomajiEntry {
+        const char* romaji;
+        const char* hiragana;
+    };
+    static const RomajiEntry kRomajiTable[];
+    static const size_t kRomajiTableSize;
 };

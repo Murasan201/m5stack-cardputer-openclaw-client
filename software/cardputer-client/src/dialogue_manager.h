@@ -25,6 +25,7 @@ private:
     void exitToIdle();
     void handlePromptInput(const Keyboard_Class::KeysState& keys, char key);
     void sendActivePrompt();
+    void updatePromptDisplay();
 
     SessionState state = SessionState::Idle;
     DisplayManager display;
