@@ -5,12 +5,12 @@
 DialogueManager dialogue;
 
 void setup() {
-    M5.begin();
+    M5Cardputer.begin(true);
     dialogue.begin();
 }
 
 void loop() {
-    M5.update();
+    M5Cardputer.update();
     dialogue.loop();
     delay(20);
 }
