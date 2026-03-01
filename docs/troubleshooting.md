@@ -1,0 +1,88 @@
+# Cardputer × OpenClaw プロジェクト トラブルシューティング
+
+このページでは本プロジェクトでこれまで対処したエラーと、今後発生が想定されるトラブル・その対応策を整理します。進行中に新しい事案が発生したら随時追記してください。
+
+## 1. すでに体験したエラーと対応
+
+### 1.1 `pio: command not found`
+- **症状**: `software/cardputer-client` のビルドを試行するために `pio run` を叩いたところ、システムが `pio` を認識せず、コマンドが実行できなかった。
+- **原因**: PlatformIO Core (`pio` CLI) がこのホストにインストールされていない。
+- **対応策**:
+  1. Python 仮想環境上で `pip install platformio` もしくは `pipx install platformio` を行い、`pio` コマンドを利用可能にする。
+  2. あるいは OS 側で PlatformIO を apt/yum などからインストールし、`pio` を PATH に含める。
+  3. `software/cardputer-client` 内で `pio run --environment m5stack-cardputer` を実行すればビルドとアップロードが可能になる。
+  4. 本環境ではまだ `pio` が無いため、当面はユーザー側のマシンでビルドしていただき、ログを共有いただければアドバイスします。
+
+### 1.2 `ModuleNotFoundError: No module named 'pytest'`
+- **症状**: `python -m pytest project/m5stack-cardputer-app/tests` を実行した際に `pytest` モジュールが見つからないエラー。
+- **原因**: Python 環境に pytest がインストールされていなかった。
+- **対応策**:
+  1. リポジトリルートで `python -m venv .venv` で仮想環境を作成し、`. .venv/bin/activate` で有効化。
+  2. `pip install pytest` を実行してテスト依存を導入。
+  3. README に仮想環境構築手順と実行コマンド (`python -m pytest project/m5stack-cardputer-app/tests`) を追記済み。
+
+### 1.3 `ModuleNotFoundError: No module named 'state_machine'` / `communication`
+- **症状**: tests 内で `from state_machine import ...` した際にモジュールが見つからず、pytest のコレクションが失敗。
+- **原因**: Python のモジュール検索パスに `project/m5stack-cardputer-app/tests` ディレクトリが存在しておらず、同梱のヘルパモジュールを import できなかった。
+- **対応策**:
+  1. テストファイルの冒頭で `sys.path` に `pathlib.Path(__file__).resolve().parent` を追加し、同じディレクトリを検索対象に加えた。
+  2. あるいは `tests/__init__.py` を利用して `from .state_machine import ...` する構成にすることで解決。
+  3. 修正後、7 件の pytest が実行されすべて成功している。
+
+## 2. 今後想定されるエラーと対処
+
+### 2.1 Wi-Fi 接続失敗 / 認証エラー
+- **症状**: `NetworkClient::connectWifi` が `WL_CONNECTED` を返さず、`PromptResponse` に「Wi-Fi が接続されていません」というエラー文字列が入る。
+- **想定原因**: SSID/PW の誤入力、電波マスターとの距離、Wi-Fi モジュールの初期化失敗。`config.h` の値を書き換えた後に本体をリセットし忘れた可能性も。
+- **対応策**:
+  1. `src/config.h` の `WIFI_SSID` / `WIFI_PASSWORD` を見直し、正しい情報を再設定。
+  2. Cardputer 側で Wi-Fi LED や `M5.Lcd.println` で現在ステータスを確認。
+  3. 障害が続く場合は別のアクセスポイントで接続確認を行い、`WIFI_CONNECT_TIMEOUT_MS` を長く取る。
+  4. 接続が安定しない環境では有線 USB-OTG など別通信経路への切り替えを検討。
+
+### 2.2 OpenClaw 側への HTTP エラー（500 / 401 / タイムアウト）
+- **症状**: `NetworkClient::postPrompt` が `HTTP_CODE_OK` 以外のコードを返し、`response.error` に `http.errorToString(code)` が入る。モード通知でも 401 や 403 が返る可能性。
+- **想定原因**: エンドポイント URL (`OPENCLAW_PROMPT_URL`) が誤っている、OpenClaw サーバが応答しない、認証トークンが無効、OpenClaw 側で何か例外。
+- **対応策**:
+  1. `OPENCLAW_PROMPT_URL` / `OPENCLAW_MODE_URL` が現場の OpenClaw に向いているか確認（IP/ポート/パス）。
+  2. 必要なら `OPENCLAW_AUTH_TOKEN` を設定し、OpenClaw 側の `Authorization` チェックに合わせる。
+  3. OpenClaw サーバーのログ（`/var/log/openclaw/...`）を確認し、リクエストペイロードの整合性や例外スタックを調べる。
+  4. 接続タイムアウトは `PROMPT_RESPONSE_TIMEOUT_MS` の値を伸ばすことでゆとりを持たせ、Wi-Fi の不安定さを吸収。
+
+### 2.3 JSON パースエラー / 応答フィールド欠落
+- **症状**: `deserializeJson` が `DeserializationError` を返す、または `parsed.containsKey("response")` が false になり、画面に `http.getString()` の生データを表示するだけになる。
+- **想定原因**: OpenClaw 回答が JSON 形式でない（プレーンテキスト）、または `response` フィールド名を変更している。文字コードや BOM の影響で parse に失敗することも。
+- **対応策**:
+  1. OpenClaw に送る `prompt` の payload 形式をドキュメントと照合し、必要なら `network_client.cpp` の解析部を調整。
+  2. `response` フィールドがなければ `http.getString()` をそのまま `response.text` に入れるフォールバックを設け済み。
+  3. 回答が長文の場合は `DisplayManager::printWrapped` で複数行出力して画面からはみ出さないようにしている。
+
+### 2.4 LCD 表示のリフレッシュ/文字化け
+- **症状**: 対話モード中にテキストが残る・表示がちらつく・日本語が化ける。
+- **想定原因**: Buffer クリア処理が足りない、TFT のバックグラウンド色とテキスト色が被る、またはフォントに含まれない文字を表示しようとしている。
+- **対応策**:
+  1. `DisplayManager::showPromptMode` では画面全体を `TFT_NAVY` で塗りつぶした後に描画しているので、末尾が残る場合は `clearRegion` を呼ぶ。
+  2. 表示化けが出る文字（記号や絵文字）を避けるか、FreeFont を追加して `M5.Lcd.setFreeFont` で汎用フォントを使う。
+  3. 文字列が 320px を超える場合は `printWrapped` で折り返し済みだが、必要ならスクロール機能を追加する。`
+
+### 2.5 ボタン入力の意図せぬ解釈 / 倍角キー
+- **症状**: `B` ボタンでの候補確定なのに `A` ボタンと同時押し判定でバックスペースになってしまう、または `C` で送信したつもりが押されていない。
+- **想定原因**: M5 のボタンデバウンスの仕様、`M5.BtnX.wasPressed()` の呼び出し順序やタイミングの差。
+- **対応策**:
+  1. ループ内の `M5.update()` を毎 `loop()` で呼ぶことで最新の状態を取得しておく。
+  2. `M5.BtnA.isPressed()` 併用で同時押し判定を行っているので、必要に応じて直前状態 (`lastState`) を保存し、Debounce 期間を長めに取る。
+  3. 会話中に予期せぬ入力が起きた場合は `promptInput.clear()` で素早くリセットし、再入力を促す UI を追加する。
+
+## 3. ビルド／実行環境の状況と備考
+- **Python テスト**: `.venv` に `pytest` を入れた状態で `python -m pytest project/m5stack-cardputer-app/tests` を実行し、7 件のテストはすべてパスしている。仮想環境構築手順は `tests/README.md` に記載。
+- **PlatformIO ビルド**: 現時点（このドキュメント更新時点）では `pio` CLI がインストールされておらず、`pio run` を実行すると「command not found」エラーになる。ビルドはユーザー側で PlatformIO を導入後、以下のコマンドで行ってください。
+  ```bash
+  # PlatformIO をまだ入れていない場合（例）
+  python -m pip install --user platformio
+  # 既存 venv を使う場合は .venv/bin/activate
+  pio run --environment m5stack-cardputer
+  pio run --environment m5stack-cardputer --target upload
+  ```
+- **ビルド実行の代替**: `pio` を利用できない環境では、ソースコードを Git などで別 PC にチェックアウトしてビルド・アップロードする。コンパイル時にエラーが出たら、該当ソース (`dialogue_manager.cpp` など) を修正し、`pio run` を再実行。
+
+以上の内容を参照しつつ、トラブルが発生した場合はこのドキュメントを更新してください。
