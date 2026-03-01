@@ -39,6 +39,8 @@ void DialogueManager::enterPromptMode() {
 }
 
 void DialogueManager::sendActivePrompt() {
+    promptInput.flushPending();
+
     if (!promptInput.hasContent()) {
         display.showStatusLine("入力文字がありません");
         return;

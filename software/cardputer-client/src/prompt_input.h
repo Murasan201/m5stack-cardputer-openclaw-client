@@ -12,6 +12,8 @@ public:
     void clear();
     // Toggle between romaji and direct (ASCII) input mode
     void toggleMode();
+    // Flush pending romaji (e.g. lone "n" → "ん") before sending
+    void flushPending();
 
     const String& buffer() const;
     const String& romajiPending() const;

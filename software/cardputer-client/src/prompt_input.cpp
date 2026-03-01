@@ -42,7 +42,9 @@ const PromptInput::RomajiEntry PromptInput::kRomajiTable[] = {
     {"nn", "ん"},
     // 1-char vowels
     {"a", "あ"}, {"i", "い"}, {"u", "う"}, {"e", "え"}, {"o", "お"},
-    {"n", "ん"},  // handled specially below
+    // Note: single "n" is NOT in this table.
+    // It is handled specially: converted to ん only when followed by
+    // a consonant (other than y/n), a non-alpha char, or on flush.
 };
 
 const size_t PromptInput::kRomajiTableSize =
@@ -162,8 +164,7 @@ void PromptInput::clear() {
     romaji.clear();
 }
 
-void PromptInput::toggleMode() {
-    // Flush pending romaji before switching
+void PromptInput::flushPending() {
     if (!romaji.isEmpty()) {
         if (romaji == "n") {
             accumulated += "ん";
@@ -172,6 +173,10 @@ void PromptInput::toggleMode() {
         }
         romaji = "";
     }
+}
+
+void PromptInput::toggleMode() {
+    flushPending();
     japaneseMode = !japaneseMode;
 }
 
