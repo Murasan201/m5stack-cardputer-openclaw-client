@@ -4,9 +4,11 @@ An interactive prompt client running on the [M5Stack Cardputer](https://docs.m5s
 
 ## Features
 
-- Japanese text input via on-screen candidate selector
-- LCD display for dialogue UI (idle / input / response / error states)
-- HTTP communication with the OpenClaw gateway
+- Romaji-to-hiragana conversion engine (full kana coverage including voiced, combo, double consonants)
+- Japanese / ASCII input mode toggle
+- LCD display for dialogue UI (idle / input / sending / response / error states)
+- HTTP communication with OpenClaw via HTTP bridge server
+- Wi-Fi connection status display on startup
 - Built with PlatformIO + Arduino framework
 
 ## Hardware
@@ -23,13 +25,19 @@ An interactive prompt client running on the [M5Stack Cardputer](https://docs.m5s
 
 ```
 software/cardputer-client/   PlatformIO project (firmware source)
-  src/config.h                Wi-Fi / OpenClaw connection settings
+  src/config.h.example        Wi-Fi / OpenClaw connection settings template
   src/main.cpp                Entry point
-  src/dialogue_manager.*      Session state machine and button handling
-  src/prompt_input.*          Japanese character candidate input
+  src/dialogue_manager.*      Session state machine and keyboard handling
+  src/prompt_input.*          Romaji-to-hiragana conversion engine
   src/display_manager.*       LCD rendering
   src/network_client.*        Wi-Fi + HTTP client
-docs/                         Requirements, setup guide, toolchain spec
+docs/
+  system-spec.md              System specification
+  feature-romaji-input.md     Romaji input feature spec
+  feature-http-bridge.md      HTTP bridge feature spec
+  toolchain-spec.md           Toolchain and build documentation
+  requirements.md             Requirements specification
+  troubleshooting.md          Troubleshooting guide
 tests/                        Python unit tests (state machine, communication)
 ```
 
@@ -39,6 +47,8 @@ tests/                        Python unit tests (state machine, communication)
 
 - Raspberry Pi (or any Linux host) with Python 3 and USB connection to Cardputer
 - PlatformIO Core CLI
+- OpenClaw gateway running on the Raspberry Pi
+- [HTTP bridge server](docs/feature-http-bridge.md) running on the Raspberry Pi
 
 ### Build & Flash
 
@@ -50,7 +60,8 @@ pip install platformio
 export PLATFORMIO_CORE_DIR=/mnt/ssd/.platformio  # optional: use SSD storage
 
 # Configure
-# Edit software/cardputer-client/src/config.h with your Wi-Fi and OpenClaw settings
+cp software/cardputer-client/src/config.h.example software/cardputer-client/src/config.h
+# Edit config.h with your Wi-Fi credentials and Raspberry Pi IP
 
 # Build
 cd software/cardputer-client
@@ -64,11 +75,14 @@ See [docs/toolchain-spec.md](docs/toolchain-spec.md) for detailed toolchain docu
 
 ## Usage
 
-1. **A button** — Start dialogue mode (shows candidate selector and input area)
-2. **A button** (in dialogue) — Cycle through Japanese character candidates
-3. **B button** — Commit selected character to input buffer
-4. **A + B** — Backspace (delete last character)
-5. **C button** — Send prompt to OpenClaw and display response
+1. Press **any key** on the idle screen to start input mode
+2. Type your prompt using the 56-key keyboard
+   - **Tab** — Toggle between Japanese `[あ]` and ASCII `[A]` input mode
+   - In Japanese mode, type romaji (e.g. `konnichiha`) to get hiragana (`こんにちは`)
+   - **Del** — Delete last character
+3. **Enter** — Send prompt to OpenClaw and display the AI response
+4. **Esc** (Fn + `` ` ``) — Return to idle screen from any state
+5. On the response/error screen, press any key to start a new prompt
 
 ## License
 

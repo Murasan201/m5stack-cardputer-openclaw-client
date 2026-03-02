@@ -19,8 +19,8 @@ void DialogueManager::loop() {
         key = keys.word[0];
     }
 
-    // Esc (0x1B): return to Idle from any state
-    if (key == 0x1B) {
+    // Esc: Fn + ` (backtick) or raw 0x1B → return to Idle
+    if (key == 0x1B || (keys.fn && key == '`')) {
         exitToIdle();
         return;
     }

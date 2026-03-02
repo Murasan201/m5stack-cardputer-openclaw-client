@@ -103,6 +103,12 @@
   6. Cardputer 側は URL 変更不要。タイムアウトを 120 秒に延長。
 - **関連ファイル**: `server.js`、`/etc/systemd/system/openclaw-http-bridge.service`、`/etc/nginx/sites-available/openclaw-proxy`
 
+### 2.10 Fn + `` ` `` で Esc が効かない（解決済み）
+- **症状**: キーボードに「Fn + `` ` `` = Esc」と印字されているが、押しても `` ` `` が入力されるだけで初期画面に戻らない。
+- **原因**: M5Cardputer のキーボードライブラリは Fn を修飾フラグ (`keys.fn = true`) として渡すだけで、キーコード自体を変換しない。Fn + `` ` `` は `key == '`'` のまま `word` に入る。
+- **対応策**: `dialogue_manager.cpp` で `keys.fn && key == '`'` の組み合わせを Esc として判定し、`exitToIdle()` を呼ぶ。
+- **教訓**: Cardputer の Fn キーによるキーマップ変換はライブラリ側で行われない。アプリ側で `keys.fn` フラグと文字の組み合わせを判定する必要がある。
+
 ### 2.6 OpenClaw gateway にローカルネットワークから接続できない
 - **症状**: Cardputer から `http://YOUR_RASPI_IP:18789` に接続しても応答がない。
 - **原因**: OpenClaw gateway は `bind: "loopback"` で `127.0.0.1` のみリッスンしている。
