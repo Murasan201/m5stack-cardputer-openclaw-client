@@ -15,5 +15,5 @@ static const char OPENCLAW_MODE_URL[] = "http://YOUR_RASPI_IP:18800/api/v1/mode"
 static const char OPENCLAW_AUTH_TOKEN[] = ""; // e.g. "Bearer <token>"
 
 static const unsigned long WIFI_CONNECT_TIMEOUT_MS = 12000;
-static const unsigned long PROMPT_RESPONSE_TIMEOUT_MS = 12000;
+static const unsigned long PROMPT_RESPONSE_TIMEOUT_MS = 120000;
 static const unsigned long DISPLAY_REFRESH_MS = 100;
