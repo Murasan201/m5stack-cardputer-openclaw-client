@@ -91,20 +91,17 @@
   2. 起動時に LCD に「Wi-Fi 接続中...」→成功時「接続成功: (IPアドレス)」/ 失敗時「接続失敗」を表示。
   3. `ensureConnected()` の再試行間隔を 1 秒→3 秒に変更。
 
-### 2.9 OpenClaw への送信でエラー発生（未解決）
+### 2.9 OpenClaw への送信で 405 Method Not Allowed（解決済み）
 - **症状**: Wi-Fi 接続成功後にプロンプトを送信すると「エラー発生」と表示され応答が得られない。
-- **想定原因**:
-  1. nginx プロキシ → OpenClaw gateway 間の通信失敗
-  2. OpenClaw API のエンドポイント (`/api/v1/prompt`) やペイロード形式の不一致
-  3. Bearer トークンの認証失敗（401/403）
-  4. OpenClaw gateway 自体が停止中
-  5. HTTPレスポンスのタイムアウト（`PROMPT_RESPONSE_TIMEOUT_MS` = 12秒）
-- **次回調査手順**:
-  1. Raspberry Pi から `curl` で手動 API テスト: `curl -X POST http://127.0.0.1:18789/api/v1/prompt -H "Content-Type: application/json" -H "Authorization: Bearer ..." -d '{"prompt":"test"}'`
-  2. nginx アクセスログ確認: `tail /var/log/nginx/access.log`
-  3. OpenClaw gateway のステータス確認: `systemctl status openclaw` or プロセス確認
-  4. エラー画面に HTTP ステータスコードを表示する改修を検討
-- **関連ファイル**: `src/network_client.cpp`、`/etc/nginx/sites-available/openclaw-proxy`
+- **原因**: OpenClaw gateway は **WebSocket プロトコルのみ** (`ws://127.0.0.1:18789`)。HTTP REST API (`/api/v1/prompt`) は存在せず、HTTP POST に対して 405 を返す。
+- **対応策（採用済み）**: HTTP→CLI ブリッジサーバーを構築。
+  1. `/home/pi/agents/project/openclaw-http-bridge/server.js` — Node.js で HTTP サーバーを起動（`127.0.0.1:18801`）。
+  2. `POST /prompt` で受けたリクエストを `openclaw agent --agent main --message <text> --json` で中継。
+  3. レスポンスを `{"response": "..."}` 形式に変換して返却。
+  4. systemd サービス `openclaw-http-bridge.service` で自動起動。
+  5. nginx で `/api/v1/prompt` を `127.0.0.1:18801` にルーティング（LAN 制限維持）。
+  6. Cardputer 側は URL 変更不要。タイムアウトを 120 秒に延長。
+- **関連ファイル**: `server.js`、`/etc/systemd/system/openclaw-http-bridge.service`、`/etc/nginx/sites-available/openclaw-proxy`
 
 ### 2.6 OpenClaw gateway にローカルネットワークから接続できない
 - **症状**: Cardputer から `http://YOUR_RASPI_IP:18789` に接続しても応答がない。

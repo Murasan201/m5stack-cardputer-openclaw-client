@@ -60,17 +60,19 @@
 - 再試行間隔を 1 秒→3 秒に変更。
 - ビルド＋書き込み成功（RAM 14.8%、Flash 40.0%）。
 
-### 12. OpenClaw 通信エラー（未解決）
-- Wi-Fi 接続成功後、プロンプト送信で「エラー発生」が LCD に表示された。
-- 原因未特定。考えられる要因:
-  - nginx プロキシ → OpenClaw gateway 間の通信エラー
-  - OpenClaw API のエンドポイントやペイロード形式の不一致
-  - Bearer トークンの認証失敗
-  - OpenClaw gateway 自体が停止またはエラー
-- 次回調査時に nginx アクセスログ・OpenClaw ログの確認、`curl` での API 手動テストを実施予定。
+### 12. OpenClaw 通信エラーの原因特定と HTTP ブリッジ構築
+- Wi-Fi 接続成功後、プロンプト送信で 405 Method Not Allowed が返っていた。
+- **根本原因**: OpenClaw gateway は WebSocket プロトコル (`ws://127.0.0.1:18789`) のみ対応。HTTP REST API (`/api/v1/prompt`) は存在しない。
+- **解決策**: HTTP→CLI ブリッジサーバーを構築。
+  - `project/openclaw-http-bridge/server.js` — Node.js 組み込み `http` モジュール（外部依存なし）
+  - `POST /prompt` → `openclaw agent --agent main --message <text> --json` を spawn
+  - レスポンスを `{"response": "..."}` 形式で返却（Cardputer の既存パーサと互換）
+  - ポート: `127.0.0.1:18801`、systemd サービスとして自動起動
+- nginx 設定更新: `/api/v1/prompt` → `127.0.0.1:18801` にルーティング（LAN 制限維持）
+- Cardputer 側: タイムアウトを 12 秒→120 秒に延長、エラー表示に HTTP コード追加、`notifyModeStatus` を無効化（ブリッジ非対応）
+- **実機テスト成功**: Cardputer からプロンプト送信 → OpenClaw の応答が LCD に表示された。
 
 ### 13. 次のステップ
-- OpenClaw 通信エラーの原因調査と修正。
-- エラー画面にHTTPステータスコードや詳細メッセージを表示する改善。
 - 漢字変換（辞書ベース or サーバー側変換）の検討。
 - 画面スクロール、応答が長い場合の対応。
+- 応答待ち中のローディング表示。

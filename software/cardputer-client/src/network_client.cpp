@@ -1,5 +1,6 @@
 #include "network_client.h"
 
+#include <M5Cardputer.h>
 #include <ArduinoJson.h>
 
 NetworkClient::NetworkClient()
@@ -7,7 +8,30 @@ NetworkClient::NetworkClient()
 
 void NetworkClient::begin() {
     WiFi.mode(WIFI_STA);
-    connectWifi();
+    WiFi.disconnect(true);
+    delay(100);
+
+    M5.Lcd.fillScreen(TFT_BLACK);
+    M5.Lcd.setTextColor(TFT_YELLOW, TFT_BLACK);
+    M5.Lcd.setCursor(10, 30);
+    M5.Lcd.print("Wi-Fi 接続中...");
+    M5.Lcd.setCursor(10, 55);
+    M5.Lcd.setTextColor(TFT_WHITE, TFT_BLACK);
+    M5.Lcd.print("SSID: ");
+    M5.Lcd.println(WIFI_SSID);
+
+    if (connectWifi()) {
+        M5.Lcd.setCursor(10, 80);
+        M5.Lcd.setTextColor(TFT_GREEN, TFT_BLACK);
+        M5.Lcd.print("接続成功: ");
+        M5.Lcd.println(WiFi.localIP().toString());
+        delay(1500);
+    } else {
+        M5.Lcd.setCursor(10, 80);
+        M5.Lcd.setTextColor(TFT_RED, TFT_BLACK);
+        M5.Lcd.println("接続失敗 - 後で再試行します");
+        delay(2000);
+    }
 }
 
 bool NetworkClient::connected() const {
@@ -18,7 +42,7 @@ bool NetworkClient::ensureConnected() {
     if (connected()) {
         return true;
     }
-    if ((millis() - lastConnectAttempt) < 1000) {
+    if ((millis() - lastConnectAttempt) < 3000) {
         return false;
     }
     return connectWifi();
@@ -70,33 +94,14 @@ PromptResponse NetworkClient::postPrompt(const String& text) {
             response.text = reply;
         }
     } else {
-        response.error = http.errorToString(code);
+        response.error = "HTTP " + String(code) + ": " + http.errorToString(code);
     }
     http.end();
     return response;
 }
 
 bool NetworkClient::notifyModeStatus(bool ready) {
-    if (!ensureConnected()) {
-        return false;
-    }
-
-    HTTPClient http;
-    http.setConnectTimeout(5000);
-    http.begin(OPENCLAW_MODE_URL);
-    http.addHeader("Content-Type", "application/json");
-    if (strlen(OPENCLAW_AUTH_TOKEN) > 0) {
-        http.addHeader("Authorization", OPENCLAW_AUTH_TOKEN);
-    }
-
-    StaticJsonDocument<192> payload;
-    payload["mode"] = "prompt";
-    payload["ready"] = ready;
-    payload["source"] = "cardputer";
-    String body;
-    serializeJson(payload, body);
-
-    const int code = http.POST(body);
-    http.end();
-    return (code >= 200 && code < 300);
+    // Mode notification not supported by HTTP bridge; silently succeed
+    (void)ready;
+    return true;
 }
