@@ -33,7 +33,7 @@ void DisplayManager::showPromptMode(const String& buffer, const String& modeIndi
 
     M5.Lcd.setTextColor(TFT_WHITE, TFT_NAVY);
     M5.Lcd.setCursor(10, 95);
-    M5.Lcd.println("Tab:あ/A切替 Enter:送信");
+    M5.Lcd.println("Tab:あ/A Enter:送信 Esc:戻る");
     M5.Lcd.println("Del:削除");
 }
 

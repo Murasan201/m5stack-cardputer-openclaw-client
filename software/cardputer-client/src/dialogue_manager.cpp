@@ -19,6 +19,12 @@ void DialogueManager::loop() {
         key = keys.word[0];
     }
 
+    // Esc (0x1B): return to Idle from any state
+    if (key == 0x1B) {
+        exitToIdle();
+        return;
+    }
+
     if (state == SessionState::Idle) {
         if (key != 0 || keys.enter) {
             enterPromptMode();
@@ -30,6 +36,12 @@ void DialogueManager::loop() {
             enterPromptMode();
         }
     }
+}
+
+void DialogueManager::exitToIdle() {
+    promptInput.clear();
+    state = SessionState::Idle;
+    display.showIdle();
 }
 
 void DialogueManager::enterPromptMode() {
